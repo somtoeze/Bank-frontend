@@ -2,39 +2,68 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
-import { useLocation } from "react-router-dom";
 
-const AddBankAccount = () => {
-  const location = useLocation();
-  const customer = location.state;
+const AddBankForm = () => {
+  const [bankUsers, setBankUsers] = useState([]);
 
-  const bank_jwtToken = sessionStorage.getItem("bank-jwtToken");
-
-  const bank = JSON.parse(sessionStorage.getItem("active-bank"));
+  const admin_jwtToken = sessionStorage.getItem("admin-jwtToken");
 
   let navigate = useNavigate();
 
-  const [bankAccount, setBankAccount] = useState({
+  const retrieveAllBankUsers = async () => {
+    try {
+      const response = await axios.get(
+        "https://bankapi.nediva.online/api/user/fetch/bank/managers",
+        {
+          headers: {
+            Authorization: "Bearer " + admin_jwtToken, // Replace with your actual JWT token
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      // Handle any errors here
+      console.error("Error fetching bank managers:", error);
+      throw error;
+    }
+  };
+
+  useEffect(() => {
+    const getAllBankUsers = async () => {
+      const allBankUsers = await retrieveAllBankUsers();
+      if (allBankUsers) {
+        setBankUsers(allBankUsers.users);
+      }
+    };
+
+    getAllBankUsers();
+  }, []);
+
+  const [bank, setBank] = useState({
     name: "",
-    ifscCode: "",
-    type: "",
-    bankId: bank.bank.id,
-    userId: customer.id,
+    code: "",
+    address: "",
+    phoneNumber: "",
+    email: "",
+    website: "",
+    country: "",
+    currency: "",
+    userId: "",
   });
 
   const handleInput = (e) => {
-    setBankAccount({ ...bankAccount, [e.target.name]: e.target.value });
+    setBank({ ...bank, [e.target.name]: e.target.value });
   };
 
-  const saveAccount = (e) => {
-    fetch("https://bankapi.cloudwitches.online/api/bank/account/add", {
+  const saveBank = (e) => {
+    fetch("https://bankapi.nediva.online/api/bank/register", {
       method: "POST",
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
-        Authorization: "Bearer " + bank_jwtToken,
+        Authorization: "Bearer " + admin_jwtToken,
       },
-      body: JSON.stringify(bankAccount),
+      body: JSON.stringify(bank),
     })
       .then((result) => {
         console.log("result", result);
@@ -55,7 +84,7 @@ const AddBankAccount = () => {
             });
 
             setTimeout(() => {
-              navigate("/customer/bank/account/detail", { state: customer });
+              window.location.reload(true);
             }, 1000); // Redirect after 3 seconds
           } else {
             console.log("Didn't got success response");
@@ -111,8 +140,10 @@ const AddBankAccount = () => {
                 <input
                   type="text"
                   className="form-control"
-                  value={bank.bank.name}
-                  readOnly
+                  id="name"
+                  name="name"
+                  onChange={handleInput}
+                  value={bank.name}
                 />
               </div>
 
@@ -123,98 +154,121 @@ const AddBankAccount = () => {
                 <input
                   type="text"
                   className="form-control"
-                  value={bank.bank.code}
-                  readOnly
+                  id="code"
+                  name="code"
+                  onChange={handleInput}
+                  value={bank.code}
                 />
               </div>
 
               <div className="col-md-6 mb-3">
-                <label htmlFor="website" className="form-label">
-                  <b>Customer Name</b>
+                <label className="form-label">
+                  <b>Bank Manager</b>
                 </label>
-                <input
-                  type="text"
+                <select
+                  name="userId"
+                  onChange={handleInput}
                   className="form-control"
-                  value={customer.name}
-                  readOnly
-                />
+                >
+                  <option value="">Select Bank Manager</option>
+
+                  {bankUsers.map((user) => {
+                    return <option value={user.id}>{user.name}</option>;
+                  })}
+                </select>
               </div>
 
               <div className="col-md-6 mb-3">
                 <label htmlFor="website" className="form-label">
-                  <b>Customer Email</b>
+                  <b>Website</b>
                 </label>
                 <input
                   type="text"
                   className="form-control"
-                  value={customer.email}
-                  readOnly
+                  id="website"
+                  name="website"
+                  onChange={handleInput}
+                  value={bank.website}
                 />
               </div>
 
               <div className="col-md-6 mb-3">
-                <label htmlFor="website" className="form-label">
-                  <b>Customer Contact</b>
+                <label htmlFor="address" className="form-label">
+                  <b>Bank Address</b>
                 </label>
-                <input
-                  type="text"
+                <textarea
                   className="form-control"
-                  value={customer.contact}
-                  readOnly
+                  id="address"
+                  name="address"
+                  rows="3"
+                  onChange={handleInput}
+                  value={bank.address}
                 />
               </div>
 
               <div className="col-md-6 mb-3">
                 <label htmlFor="quantity" className="form-label">
-                  <b>Account Number</b>
+                  <b>Bank Email</b>
+                </label>
+                <input
+                  type="email"
+                  className="form-control"
+                  id="email"
+                  name="email"
+                  onChange={handleInput}
+                  value={bank.email}
+                />
+              </div>
+
+              <div className="col-md-6 mb-3">
+                <label htmlFor="phoneNumber" className="form-label">
+                  <b>Phone Number</b>
                 </label>
                 <input
                   type="number"
                   className="form-control"
-                  id="number"
-                  name="number"
+                  id="phoneNumber"
+                  name="phoneNumber"
                   onChange={handleInput}
-                  value={bankAccount.contact}
+                  value={bank.phoneNumber}
                 />
               </div>
 
               <div className="col-md-6 mb-3">
-                <label htmlFor="quantity" className="form-label">
-                  <b>IFSC Code</b>
+                <label htmlFor="country" className="form-label">
+                  <b>Country</b>
                 </label>
                 <input
                   type="text"
                   className="form-control"
-                  id="ifscCode"
-                  name="ifscCode"
+                  id="country"
+                  name="country"
                   onChange={handleInput}
-                  value={bankAccount.ifscCode}
+                  value={bank.country}
                 />
               </div>
 
-              <div class="col-md-6 mb-3">
-                <label for="role" class="form-label">
-                  <b>Account Type</b>
+              <div className="col-md-6 mb-3">
+                <label htmlFor="currency" className="form-label">
+                  <b>Currency</b>
                 </label>
-                <select
-                  onChange={handleInput}
+                <input
+                  type="text"
                   className="form-control"
-                  name="type"
-                >
-                  <option value="0">Select Account Type</option>
-
-                  <option value="Saving"> Saving </option>
-                  <option value="Current"> Current </option>
-                </select>
+                  id="currency"
+                  name="currency"
+                  onChange={handleInput}
+                  value={bank.currency}
+                />
               </div>
 
               <div className="d-flex aligns-items-center justify-content-center">
                 <button
                   type="submit"
                   className="btn bg-color custom-bg-text col-md-4"
-                  onClick={saveAccount}
+                  onClick={saveBank}
                 >
-                  Add Account
+                  Register Bank
                 </button>
                 <ToastContainer />
               </div>
@@ -226,4 +280,4 @@ const AddBankAccount = () => {
   );
 };
 
-export default AddBankAccount;
+export default AddBankForm;
